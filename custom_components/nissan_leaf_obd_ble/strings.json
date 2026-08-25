@@ -17,6 +17,116 @@
       }
     }
   },
+  "entity": {
+    "binary_sensor": {
+      "power_switch": {
+        "name": "Power switch status"
+      },
+      "ac_on": {
+        "name": "AC status"
+      },
+      "rear_heater": {
+        "name": "Rear heater status"
+      },
+      "eco_mode": {
+        "name": "ECO mode status"
+      },
+      "e_pedal_mode": {
+        "name": "e-Pedal mode status"
+      }
+    },
+    "button": {
+      "refresh": {
+        "name": "Refresh"
+      }
+    },
+    "sensor": {
+      "gear_position": {
+        "name": "Gear position"
+      },
+      "bat_12v_voltage": {
+        "name": "12V battery voltage"
+      },
+      "bat_12v_current": {
+        "name": "12V battery current"
+      },
+      "quick_charges": {
+        "name": "Number of quick charges"
+      },
+      "l1_l2_charges": {
+        "name": "Number of L1/L2 charges"
+      },
+      "ambient_temp": {
+        "name": "Ambient temperature"
+      },
+      "estimated_ac_power": {
+        "name": "Estimated AC system power"
+      },
+      "estimated_ptc_power": {
+        "name": "Estimated PTC system power"
+      },
+      "aux_power": {
+        "name": "Auxiliary equipment power"
+      },
+      "ac_power": {
+        "name": "AC system power"
+      },
+      "plug_state": {
+        "name": "Plug state of J1772 socket"
+      },
+      "charge_mode": {
+        "name": "Charging mode"
+      },
+      "rpm": {
+        "name": "Motor RPM"
+      },
+      "obc_out_power": {
+        "name": "On-board charger output power"
+      },
+      "motor_power": {
+        "name": "Traction motor power"
+      },
+      "speed": {
+        "name": "Vehicle speed"
+      },
+      "odometer": {
+        "name": "Odometer"
+      },
+      "tp_fr": {
+        "name": "Tyre pressure front right"
+      },
+      "tp_fl": {
+        "name": "Tyre pressure front left"
+      },
+      "tp_rr": {
+        "name": "Tyre pressure rear right"
+      },
+      "tp_rl": {
+        "name": "Tyre pressure rear left"
+      },
+      "range_remaining": {
+        "name": "Range remaining"
+      },
+      "state_of_charge": {
+        "name": "State of charge"
+      },
+      "hv_battery_health": {
+        "name": "HV battery health"
+      },
+      "hv_battery_ah": {
+        "name": "HV battery capacity"
+      },
+      "hv_battery_current_1": {
+        "name": "HV battery current 1"
+      },
+      "hv_battery_current_2": {
+        "name": "HV battery current 2"
+      },
+      "hv_battery_voltage": {
+        "name": "HV battery voltage"
+      }
+    }
+  },
   "options": {
     "step": {
       "init": {

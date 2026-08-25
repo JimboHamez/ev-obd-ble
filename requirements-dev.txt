@@ -17,3 +17,8 @@ aiousbwatcher>=1.1.0
 # Linting / formatting (also run via .pre-commit-config.yaml)
 pre-commit>=3.7.0
 ruff>=0.4.8
+
+# Static typing. The quality scale's strict-typing rule is enforced by
+# `mypy custom_components`; see the [mypy] section of setup.cfg.
+mypy>=1.11.0
+types-PyYAML>=6.0.12

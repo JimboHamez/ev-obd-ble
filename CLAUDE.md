@@ -34,4 +34,6 @@ Leaf to Toyota bZ4X / Subaru Solterra.
 - [CONTRIBUTING.md](CONTRIBUTING.md) — dev setup, how to run the tests, and two
   conftest gotchas around Home Assistant's `hass` fixture.
 
-Run `pytest` and `ruff check .` before finishing any change.
+Run `pytest`, `ruff check .` and `mypy custom_components` before finishing
+any change. All three must pass: the integration targets quality scale
+Platinum, whose `strict-typing` rule is what the mypy config enforces.

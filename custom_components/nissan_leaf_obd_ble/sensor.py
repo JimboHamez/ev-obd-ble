@@ -1,28 +1,35 @@
 """Sensor platform for Nissan Leaf OBD BLE."""
 
+from __future__ import annotations
+
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from homeassistant.helpers.typing import StateType
 
-from .const import DOMAIN, NAME
+from .coordinator import NissanLeafObdBleConfigEntry
 from .entity import NissanLeafObdBleEntity
+
+# All values come from a single coordinator refresh, so entities never talk to
+# the dongle themselves and need no update throttling.
+PARALLEL_UPDATES = 0
 
 SENSOR_TYPES: dict[str, SensorEntityDescription] = {
     "gear_position": SensorEntityDescription(
         key="gear_position",
+        translation_key="gear_position",
         icon="mdi:car-shift-pattern",
-        name="Gear position",
         device_class=SensorDeviceClass.ENUM,
     ),
     "bat_12v_voltage": SensorEntityDescription(
         key="bat_12v_voltage",
+        translation_key="bat_12v_voltage",
         icon="mdi:car-battery",
-        name="12V battery voltage",
         native_unit_of_measurement="V",
         suggested_display_precision=1,
         device_class=SensorDeviceClass.VOLTAGE,
@@ -30,8 +37,8 @@ SENSOR_TYPES: dict[str, SensorEntityDescription] = {
     ),
     "bat_12v_current": SensorEntityDescription(
         key="bat_12v_current",
+        translation_key="bat_12v_current",
         icon="mdi:car-battery",
-        name="12V battery current",
         native_unit_of_measurement="A",
         suggested_display_precision=2,
         device_class=SensorDeviceClass.CURRENT,
@@ -39,20 +46,20 @@ SENSOR_TYPES: dict[str, SensorEntityDescription] = {
     ),
     "quick_charges": SensorEntityDescription(
         key="quick_charges",
+        translation_key="quick_charges",
         icon="mdi:ev-plug-chademo",
-        name="Number of quick charges",
         state_class=SensorStateClass.MEASUREMENT,
     ),
     "l1_l2_charges": SensorEntityDescription(
         key="l1_l2_charges",
+        translation_key="l1_l2_charges",
         icon="mdi:ev-plug-type2",
-        name="Number of L1/L2 charges",
         state_class=SensorStateClass.MEASUREMENT,
     ),
     "ambient_temp": SensorEntityDescription(
         key="ambient_temp",
+        translation_key="ambient_temp",
         icon="mdi:thermometer",
-        name="Ambient temperature",
         native_unit_of_measurement="°C",
         suggested_display_precision=1,
         device_class=SensorDeviceClass.TEMPERATURE,
@@ -60,75 +67,75 @@ SENSOR_TYPES: dict[str, SensorEntityDescription] = {
     ),
     "estimated_ac_power": SensorEntityDescription(
         key="estimated_ac_power",
+        translation_key="estimated_ac_power",
         icon="mdi:air-conditioner",
-        name="Estimated AC system power",
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
     ),
     "estimated_ptc_power": SensorEntityDescription(
         key="estimated_ptc_power",
+        translation_key="estimated_ptc_power",
         icon="mdi:heating-coil",
-        name="Estimated PTC system power",
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
     ),
     "aux_power": SensorEntityDescription(
         key="aux_power",
+        translation_key="aux_power",
         icon="mdi:generator-portable",
-        name="Auxiliary equipment power",
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
     ),
     "ac_power": SensorEntityDescription(
         key="ac_power",
+        translation_key="ac_power",
         icon="mdi:air-conditioner",
-        name="AC system power",
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
     ),
     "plug_state": SensorEntityDescription(
         key="plug_state",
+        translation_key="plug_state",
         icon="mdi:ev-plug-type1",
-        name="Plug state of J1772 socket",
         device_class=SensorDeviceClass.ENUM,
     ),
     "charge_mode": SensorEntityDescription(
         key="charge_mode",
+        translation_key="charge_mode",
         icon="mdi:ev-station",
-        name="Charging mode",
         device_class=SensorDeviceClass.ENUM,
     ),
     "rpm": SensorEntityDescription(
         key="rpm",
+        translation_key="rpm",
         icon="mdi:gauge",
-        name="Motor RPM",
         native_unit_of_measurement="RPM",
         state_class=SensorStateClass.MEASUREMENT,
     ),
     "obc_out_power": SensorEntityDescription(
         key="obc_out_power",
+        translation_key="obc_out_power",
         icon="mdi:generator-mobile",
-        name="On-board charger output power",
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
     ),
     "motor_power": SensorEntityDescription(
         key="motor_power",
+        translation_key="motor_power",
         icon="mdi:engine",
-        name="Traction motor power",
         native_unit_of_measurement="W",
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
     ),
     "speed": SensorEntityDescription(
         key="speed",
+        translation_key="speed",
         icon="mdi:speedometer",
-        name="Vehicle speed",
         native_unit_of_measurement="km/h",
         suggested_display_precision=0,
         device_class=SensorDeviceClass.SPEED,
@@ -136,8 +143,8 @@ SENSOR_TYPES: dict[str, SensorEntityDescription] = {
     ),
     "odometer": SensorEntityDescription(
         key="odometer",
+        translation_key="odometer",
         # icon="mdi:speedometer",
-        name="Odometer",
         native_unit_of_measurement="km",
         suggested_display_precision=0,
         device_class=SensorDeviceClass.DISTANCE,
@@ -145,8 +152,8 @@ SENSOR_TYPES: dict[str, SensorEntityDescription] = {
     ),
     "tp_fr": SensorEntityDescription(
         key="tp_fr",
+        translation_key="tp_fr",
         # icon="mdi:speedometer",
-        name="Tyre pressure front right",
         native_unit_of_measurement="kPa",
         suggested_display_precision=0,
         device_class=SensorDeviceClass.PRESSURE,
@@ -154,8 +161,8 @@ SENSOR_TYPES: dict[str, SensorEntityDescription] = {
     ),
     "tp_fl": SensorEntityDescription(
         key="tp_fl",
+        translation_key="tp_fl",
         # icon="mdi:speedometer",
-        name="Tyre pressure front left",
         native_unit_of_measurement="kPa",
         suggested_display_precision=0,
         device_class=SensorDeviceClass.PRESSURE,
@@ -163,8 +170,8 @@ SENSOR_TYPES: dict[str, SensorEntityDescription] = {
     ),
     "tp_rr": SensorEntityDescription(
         key="tp_rr",
+        translation_key="tp_rr",
         # icon="mdi:speedometer",
-        name="Tyre pressure rear right",
         native_unit_of_measurement="kPa",
         suggested_display_precision=0,
         device_class=SensorDeviceClass.PRESSURE,
@@ -172,8 +179,8 @@ SENSOR_TYPES: dict[str, SensorEntityDescription] = {
     ),
     "tp_rl": SensorEntityDescription(
         key="tp_rl",
+        translation_key="tp_rl",
         # icon="mdi:speedometer",
-        name="Tyre pressure rear left",
         native_unit_of_measurement="kPa",
         suggested_display_precision=0,
         device_class=SensorDeviceClass.PRESSURE,
@@ -181,8 +188,8 @@ SENSOR_TYPES: dict[str, SensorEntityDescription] = {
     ),
     "range_remaining": SensorEntityDescription(
         key="range_remaining",
+        translation_key="range_remaining",
         # icon="mdi:speedometer",
-        name="Range remaining",
         native_unit_of_measurement="km",
         suggested_display_precision=0,
         device_class=SensorDeviceClass.DISTANCE,
@@ -190,8 +197,8 @@ SENSOR_TYPES: dict[str, SensorEntityDescription] = {
     ),
     "state_of_charge": SensorEntityDescription(
         key="state_of_charge",
+        translation_key="state_of_charge",
         icon="mdi:ev-station",
-        name="State of charge",
         native_unit_of_measurement="%",
         suggested_display_precision=1,
         device_class=SensorDeviceClass.BATTERY,
@@ -199,8 +206,8 @@ SENSOR_TYPES: dict[str, SensorEntityDescription] = {
     ),
     "hv_battery_health": SensorEntityDescription(
         key="hv_battery_health",
+        translation_key="hv_battery_health",
         icon="mdi:battery-heart",
-        name="HV battery health",
         native_unit_of_measurement="%",
         suggested_display_precision=1,
         # device_class=SensorDeviceClass.BATTERY,
@@ -208,16 +215,16 @@ SENSOR_TYPES: dict[str, SensorEntityDescription] = {
     ),
     "hv_battery_Ah": SensorEntityDescription(
         key="hv_battery_Ah",
+        translation_key="hv_battery_ah",
         # icon="mdi:ev-station",
-        name="HV battery capacity",
         native_unit_of_measurement="Ah",
         suggested_display_precision=1,
         state_class=SensorStateClass.MEASUREMENT,
     ),
     "hv_battery_current_1": SensorEntityDescription(
         key="hv_battery_current_1",
+        translation_key="hv_battery_current_1",
         # icon="mdi:ev-station",
-        name="HV battery current 1",
         native_unit_of_measurement="A",
         suggested_display_precision=1,
         device_class=SensorDeviceClass.CURRENT,
@@ -225,8 +232,8 @@ SENSOR_TYPES: dict[str, SensorEntityDescription] = {
     ),
     "hv_battery_current_2": SensorEntityDescription(
         key="hv_battery_current_2",
+        translation_key="hv_battery_current_2",
         # icon="mdi:ev-station",
-        name="HV battery current 2",
         native_unit_of_measurement="A",
         suggested_display_precision=1,
         device_class=SensorDeviceClass.CURRENT,
@@ -234,8 +241,8 @@ SENSOR_TYPES: dict[str, SensorEntityDescription] = {
     ),
     "hv_battery_voltage": SensorEntityDescription(
         key="hv_battery_voltage",
+        translation_key="hv_battery_voltage",
         # icon="mdi:ev-station",
-        name="HV battery voltage",
         native_unit_of_measurement="V",
         suggested_display_precision=1,
         device_class=SensorDeviceClass.VOLTAGE,
@@ -245,43 +252,29 @@ SENSOR_TYPES: dict[str, SensorEntityDescription] = {
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities
-):
+    hass: HomeAssistant,
+    entry: NissanLeafObdBleConfigEntry,
+    async_add_entities: AddConfigEntryEntitiesCallback,
+) -> None:
     """Set up sensor platform."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     entities = [
         NissanLeafObdBleSensor(coordinator, entry, desc)
         for desc in SENSOR_TYPES.values()
     ]
-    for desc in coordinator.extra_sensor_descriptions.values():
-        entities.append(NissanLeafObdBleSensor(coordinator, entry, desc))
+    entities.extend(
+        NissanLeafObdBleSensor(coordinator, entry, desc)
+        for desc in coordinator.extra_sensor_descriptions.values()
+    )
     async_add_entities(entities)
 
 
 class NissanLeafObdBleSensor(NissanLeafObdBleEntity, SensorEntity):
-    """Config entry for nissan_leaf_obd_ble sensors."""
+    """Sensor reading a single decoded value from the coordinator."""
 
-    def __init__(
-        self,
-        coordinator,
-        config_entry,
-        description: SensorEntityDescription,
-    ) -> None:
-        """Initialize the sensor."""
-        super().__init__(coordinator, config_entry)
-        self._description = description
-        self._sensor = description.key
-        self._attr_name = f"{NAME} {description.name}"
-        self._attr_device_class = description.device_class
-        self._attr_native_unit_of_measurement = description.native_unit_of_measurement
-        self._attr_state_class = description.state_class
+    entity_description: SensorEntityDescription
 
     @property
-    def native_value(self):
+    def native_value(self) -> StateType:
         """Return the state of the sensor."""
-        return self.coordinator.data.get(self._sensor)
-
-    @property
-    def icon(self):
-        """Return the icon of the sensor."""
-        return self._description.icon
+        return self.coordinator.data.get(self.entity_description.key)

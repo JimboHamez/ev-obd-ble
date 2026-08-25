@@ -31,6 +31,12 @@ repos:
     rev: v1.10.0
     hooks:
       - id: mypy
+        # Needed in the hook's isolated env: the strict config in setup.cfg
+        # type-checks against Home Assistant's inline types.
+        additional_dependencies:
+          - homeassistant>=2024.6.0
+          - types-PyYAML>=6.0.12
+        files: ^custom_components/
         args:
           - --pretty
           - --show-error-codes

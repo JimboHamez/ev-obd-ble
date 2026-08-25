@@ -59,9 +59,7 @@ def test_override_paths_point_at_this_integration(integration_dir: Path):
 def test_manifest_requirements_are_installed(manifest: dict):
     """Every manifest requirement must be importable in the dev environment."""
     for requirement in manifest.get("requirements", []):
-        distribution = (
-            requirement.split(">=")[0].split("==")[0].split("<")[0].strip()
-        )
+        distribution = requirement.split(">=")[0].split("==")[0].split("<")[0].strip()
         module = distribution.replace("-", "_")
         pytest.importorskip(
             module,
@@ -90,6 +88,8 @@ def test_translations_match_strings(integration_dir: Path):
     def keys(node, prefix=""):
         if not isinstance(node, dict):
             return {prefix}
-        return {k for key, value in node.items() for k in keys(value, f"{prefix}/{key}")}
+        return {
+            k for key, value in node.items() for k in keys(value, f"{prefix}/{key}")
+        }
 
     assert keys(strings) == keys(english)

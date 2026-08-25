@@ -1,10 +1,14 @@
 """Load user-defined OBD command overrides for the Nissan Leaf integration."""
 
+from __future__ import annotations
+
+from collections.abc import Callable
 import importlib.util
 import logging
 import struct
 from pathlib import Path
-from typing import Any, Callable
+from types import ModuleType
+from typing import Any, cast
 
 import yaml
 from homeassistant.components.sensor import (
@@ -20,6 +24,11 @@ from py_nissan_leaf_obd_ble.commands import leaf_commands
 from .const import DECODERS_MODULE_FILE, OVERRIDES_FILE
 
 _LOGGER = logging.getLogger(__name__)
+
+# Decoders are handed the raw message list from the OBD library, which ships no
+# type information, and return the {sensor_key: value} mapping the coordinator
+# caches.
+type Decoder = Callable[..., dict[str, Any]]
 
 _DEVICE_CLASSES: dict[str, SensorDeviceClass] = {
     "battery": SensorDeviceClass.BATTERY,
@@ -100,15 +109,21 @@ def load_overrides(
             try:
                 extra_sensor_descriptions.update(_build_sensor_descriptions(key, entry))
             except Exception as err:
-                _LOGGER.error("Invalid sensor definition for command '%s': %s", key, err)
+                _LOGGER.error(
+                    "Invalid sensor definition for command '%s': %s", key, err
+                )
 
     return extra_commands, extra_sensor_descriptions, disabled_commands
 
 
-def _load_python_module(path: Path):
+def _load_python_module(path: Path) -> ModuleType | None:
     """Load a Python module from a file path."""
     try:
-        spec = importlib.util.spec_from_file_location("nissan_leaf_obd_ble_decoders", path)
+        spec = importlib.util.spec_from_file_location(
+            "nissan_leaf_obd_ble_decoders", path
+        )
+        if spec is None or spec.loader is None:
+            raise ImportError(f"Could not build a module spec for {path}")
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         _LOGGER.info("Loaded custom decoders from %s", path)
@@ -118,7 +133,9 @@ def _load_python_module(path: Path):
         return None
 
 
-def _build_command(key: str, entry: dict, python_module) -> OBDCommand:
+def _build_command(
+    key: str, entry: dict[str, Any], python_module: ModuleType | None
+) -> OBDCommand:
     """Build an OBDCommand, inheriting unspecified fields from the base command if it exists."""
     base = leaf_commands.get(key)
 
@@ -155,7 +172,9 @@ def _build_command(key: str, entry: dict, python_module) -> OBDCommand:
     return OBDCommand(key, desc, command, byte_count, decoder, header)
 
 
-def _build_decoder(key: str, spec: dict, python_module) -> Callable:
+def _build_decoder(
+    key: str, spec: dict[str, Any], python_module: ModuleType | None
+) -> Decoder:
     """Build a decoder function from a YAML decoder spec dict."""
     decoder_type = spec.get("type")
     if not decoder_type:
@@ -166,7 +185,13 @@ def _build_decoder(key: str, spec: dict, python_module) -> Callable:
         scale = float(spec.get("scale", 1.0))
         offset = float(spec.get("offset", 0.0))
 
-        def _linear(messages, _key=key, _off=byte_offset, _scale=scale, _add=offset):
+        def _linear(
+            messages: Any,
+            _key: str = key,
+            _off: int = byte_offset,
+            _scale: float = scale,
+            _add: float = offset,
+        ) -> dict[str, Any]:
             return {_key: messages[0].data[_off] * _scale + _add}
 
         return _linear
@@ -180,15 +205,15 @@ def _build_decoder(key: str, spec: dict, python_module) -> Callable:
         offset = float(spec.get("offset", 0.0))
 
         def _multi_byte(
-            messages,
-            _key=key,
-            _start=byte_start,
-            _end=byte_end,
-            _signed=signed,
-            _order=byte_order,
-            _scale=scale,
-            _add=offset,
-        ):
+            messages: Any,
+            _key: str = key,
+            _start: int = byte_start,
+            _end: int = byte_end,
+            _signed: bool = signed,
+            _order: Any = byte_order,
+            _scale: float = scale,
+            _add: float = offset,
+        ) -> dict[str, Any]:
             v = int.from_bytes(messages[0].data[_start:_end], _order, signed=_signed)
             return {_key: v * _scale + _add}
 
@@ -202,14 +227,14 @@ def _build_decoder(key: str, spec: dict, python_module) -> Callable:
         offset = float(spec.get("offset", 0.0))
 
         def _struct(
-            messages,
-            _key=key,
-            _fmt=fmt,
-            _start=byte_start,
-            _end=byte_end,
-            _scale=scale,
-            _add=offset,
-        ):
+            messages: Any,
+            _key: str = key,
+            _fmt: str = fmt,
+            _start: int = byte_start,
+            _end: int = byte_end,
+            _scale: float = scale,
+            _add: float = offset,
+        ) -> dict[str, Any]:
             v = struct.unpack(_fmt, messages[0].data[_start:_end])[0]
             return {_key: v * _scale + _add}
 
@@ -220,7 +245,13 @@ def _build_decoder(key: str, spec: dict, python_module) -> Callable:
         values = {int(k): v for k, v in spec["values"].items()}
         default = spec.get("default")
 
-        def _lookup(messages, _key=key, _off=byte_offset, _values=values, _default=default):
+        def _lookup(
+            messages: Any,
+            _key: str = key,
+            _off: int = byte_offset,
+            _values: dict[Any, Any] = values,
+            _default: Any = default,
+        ) -> dict[str, Any]:
             return {_key: _values.get(messages[0].data[_off], _default)}
 
         return _lookup
@@ -229,7 +260,12 @@ def _build_decoder(key: str, spec: dict, python_module) -> Callable:
         byte_offset = int(spec["byte_offset"])
         bit_mask = int(str(spec["bit_mask"]), 0)
 
-        def _bit_flag(messages, _key=key, _off=byte_offset, _mask=bit_mask):
+        def _bit_flag(
+            messages: Any,
+            _key: str = key,
+            _off: int = byte_offset,
+            _mask: int = bit_mask,
+        ) -> dict[str, Any]:
             return {_key: (messages[0].data[_off] & _mask) == _mask}
 
         return _bit_flag
@@ -238,7 +274,12 @@ def _build_decoder(key: str, spec: dict, python_module) -> Callable:
         byte_offset = int(spec["byte_offset"])
         value = int(str(spec["value"]), 0)
 
-        def _equality(messages, _key=key, _off=byte_offset, _val=value):
+        def _equality(
+            messages: Any,
+            _key: str = key,
+            _off: int = byte_offset,
+            _val: int = value,
+        ) -> dict[str, Any]:
             return {_key: messages[0].data[_off] == _val}
 
         return _equality
@@ -249,8 +290,10 @@ def _build_decoder(key: str, spec: dict, python_module) -> Callable:
             _build_decoder(field["key"], field, python_module) for field in fields
         ]
 
-        def _multi_field(messages, _subs=sub_decoders):
-            result = {}
+        def _multi_field(
+            messages: Any, _subs: list[Decoder] = sub_decoders
+        ) -> dict[str, Any]:
+            result: dict[str, Any] = {}
             for sub in _subs:
                 result.update(sub(messages))
             return result
@@ -273,13 +316,13 @@ def _build_decoder(key: str, spec: dict, python_module) -> Callable:
             raise ValueError(
                 f"Function '{func_name}' not found in '{DECODERS_MODULE_FILE}'"
             )
-        return func
+        return cast(Decoder, func)
 
     raise ValueError(f"Unknown decoder type '{decoder_type}' for command '{key}'")
 
 
 def _build_sensor_descriptions(
-    key: str, entry: dict
+    key: str, entry: dict[str, Any]
 ) -> dict[str, SensorEntityDescription]:
     """Build SensorEntityDescription(s) from the sensor: block of an override entry."""
     sensor_block = entry["sensor"]
@@ -296,7 +339,7 @@ def _build_sensor_descriptions(
     return {key: _sensor_desc_from_block(key, sensor_block)}
 
 
-def _sensor_desc_from_block(key: str, block: dict) -> SensorEntityDescription:
+def _sensor_desc_from_block(key: str, block: dict[str, Any]) -> SensorEntityDescription:
     """Build a SensorEntityDescription from a sensor config block."""
     device_class_str = block.get("device_class")
     device_class = _DEVICE_CLASSES.get(device_class_str) if device_class_str else None

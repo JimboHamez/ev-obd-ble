@@ -1,23 +1,28 @@
 """Adds config flow for Nissan Leaf OBD BLE."""
 
+from __future__ import annotations
+
 from typing import Any
+
+import voluptuous as vol
 
 try:
     from bluetooth_data_tools import human_readable_name
 except ImportError:  # pragma: no cover - fallback for missing dependency
-    def human_readable_name(_manufacturer: str | None, name: str | None, address: str):
+
+    def human_readable_name(name: str | None, local_name: str, address: str) -> str:
         """Fallback if bluetooth_data_tools is unavailable."""
-        return name or address
-import voluptuous as vol
+        return local_name or address
+
 
 from homeassistant import config_entries
+from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.components.bluetooth import (
     BluetoothServiceInfoBleak,
     async_discovered_service_info,
 )
 from homeassistant.const import CONF_ADDRESS
 from homeassistant.core import callback
-from homeassistant.data_entry_flow import FlowResult
 
 from .const import (
     DOMAIN,
@@ -40,7 +45,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     def __init__(self) -> None:
         """Initialize."""
-        self._errors = {}
         self._discovery_info: BluetoothServiceInfoBleak | None = None
         self._discovered_devices: dict[str, BluetoothServiceInfoBleak] = {}
         self._selected_device: BluetoothServiceInfoBleak | None = None
@@ -55,7 +59,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_bluetooth(
         self, discovery_info: BluetoothServiceInfoBleak
-    ) -> FlowResult:
+    ) -> ConfigFlowResult:
         """Handle the bluetooth discovery step."""
         await self.async_set_unique_id(discovery_info.address)
         self._abort_if_unique_id_configured()
@@ -67,7 +71,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         }
         return await self.async_step_user()
 
-    async def async_step_user(self, user_input: dict | None = None) -> FlowResult:
+    async def async_step_user(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         """Handle the user step to pick discovered device."""
         errors: dict[str, str] = {}
 
@@ -117,10 +123,12 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     async def async_step_configure(
-        self, user_input: dict | None = None
-    ) -> FlowResult:
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         """Handle UUID configuration step."""
         if user_input is not None:
+            # async_step_user only reaches this step once a device is selected.
+            assert self._selected_device is not None
             return self.async_create_entry(
                 title=self._selected_device.name,
                 data={CONF_ADDRESS: self._selected_device.address},
@@ -152,11 +160,11 @@ class NissanLeafObdBleOptionsFlowHandler(config_entries.OptionsFlow):
 
     def __init__(self) -> None:
         """Initialize options flow."""
-        self.options: dict = {}
+        self.options: dict[str, Any] = {}
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> ConfigFlowResult:
         """Manage the options."""
         if not self.options:
             self.options = dict(self.config_entry.options)
@@ -200,8 +208,8 @@ class NissanLeafObdBleOptionsFlowHandler(config_entries.OptionsFlow):
             ),
         )
 
-    async def _update_options(self):
+    async def _update_options(self) -> ConfigFlowResult:
         """Update config entry options."""
         return self.async_create_entry(
-            title=self.config_entry.data.get(CONF_ADDRESS), data=self.options
+            title=self.config_entry.data[CONF_ADDRESS], data=self.options
         )
