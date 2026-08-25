@@ -2,18 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 import voluptuous as vol
-
-try:
-    from bluetooth_data_tools import human_readable_name
-except ImportError:  # pragma: no cover - fallback for missing dependency
-
-    def human_readable_name(name: str | None, local_name: str, address: str) -> str:
-        """Fallback if bluetooth_data_tools is unavailable."""
-        return local_name or address
-
 
 from homeassistant import config_entries
 from homeassistant.config_entries import ConfigFlowResult
@@ -33,6 +25,27 @@ from .const import (
     DEFAULT_CHARACTERISTIC_UUID_READ,
     DEFAULT_CHARACTERISTIC_UUID_WRITE,
 )
+
+# bluetooth_data_tools exposes this as a plain function in some releases and as
+# an lru_cache wrapper in others, so bind it through an explicit callable type
+# rather than redefining the name.
+HumanReadableName = Callable[[str | None, str, str], str]
+
+
+def _fallback_human_readable_name(
+    name: str | None, local_name: str, address: str
+) -> str:
+    """Name a discovered device when bluetooth_data_tools is unavailable."""
+    return local_name or address
+
+
+try:
+    from bluetooth_data_tools import human_readable_name as _human_readable_name
+
+    human_readable_name: HumanReadableName = _human_readable_name
+except ImportError:  # pragma: no cover - fallback for missing dependency
+    human_readable_name = _fallback_human_readable_name
+
 
 LOCAL_NAMES = {"OBDBLE"}
 
