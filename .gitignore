@@ -7,3 +7,4 @@ venv
 _new_package_repo/
 .DS_Store
 ha_components/
+.mcp.json
