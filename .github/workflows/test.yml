@@ -39,10 +39,12 @@ jobs:
           python-version: "3.13"
       - name: Install ruff
         run: pip install "ruff>=0.15"
+      # Scoped to the Python trees: ruff 0.16 also formats code blocks in Markdown, which would make the result
+      # depend on the ruff version installed.
       - name: Format check
-        run: ruff format --check .
+        run: ruff format --check custom_components tests
       - name: Lint
-        run: ruff check .
+        run: ruff check custom_components tests
 
   mypy:
     name: mypy

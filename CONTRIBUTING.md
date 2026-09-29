@@ -22,8 +22,8 @@ configuration (pytest, coverage, ruff, mypy) lives in `pyproject.toml`.
 ```bash
 pytest                    # with coverage, per pyproject.toml
 pytest --no-cov           # faster
-ruff format --check .
-ruff check .
+ruff format --check custom_components tests
+ruff check custom_components tests
 mypy custom_components    # strict; the quality scale's strict-typing rule
 ```
 
