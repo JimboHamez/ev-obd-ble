@@ -1,32 +1,44 @@
 """Button platform for Nissan Leaf OBD BLE."""
 
-from homeassistant.components.button import ButtonEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
+from __future__ import annotations
 
-from .const import DOMAIN, NAME
+from typing import TYPE_CHECKING
+
+from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
+from homeassistant.const import EntityCategory
+
 from .entity import NissanLeafObdBleEntity
+
+if TYPE_CHECKING:
+    from homeassistant.core import HomeAssistant
+    from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+
+    from .coordinator import NissanLeafObdBleConfigEntry
+
+# The button only asks the coordinator to refresh, so it needs no throttling.
+PARALLEL_UPDATES = 0
+
+REFRESH_BUTTON = ButtonEntityDescription(
+    key="refresh",
+    translation_key="refresh",
+    icon="mdi:refresh",
+    entity_category=EntityCategory.DIAGNOSTIC,
+)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities
+    hass: HomeAssistant,
+    entry: NissanLeafObdBleConfigEntry,
+    async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up button platform."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities([NissanLeafObdBleRefreshButton(coordinator, entry)])
+    async_add_entities([NissanLeafObdBleRefreshButton(entry.runtime_data, entry, REFRESH_BUTTON)])
 
 
 class NissanLeafObdBleRefreshButton(NissanLeafObdBleEntity, ButtonEntity):
     """Button that triggers an immediate coordinator refresh."""
 
-    _attr_entity_category = EntityCategory.DIAGNOSTIC
-    _attr_icon = "mdi:refresh"
-    _attr_name = f"{NAME} Refresh"
-
-    def __init__(self, coordinator, config_entry) -> None:
-        """Initialize the button."""
-        super().__init__(coordinator, config_entry)
+    entity_description: ButtonEntityDescription
 
     async def async_press(self) -> None:
         """Trigger an immediate update."""

@@ -1,16 +1,26 @@
 """Coodinator for Nissan Leaf OBD BLE."""
 
+from __future__ import annotations
+
 import asyncio
-from datetime import timedelta
 import logging
-from typing import Any
+from datetime import timedelta
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.bluetooth.api import async_address_present
-from homeassistant.core import HomeAssistant
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from py_nissan_leaf_obd_ble import NissanLeafObdBleApiClient
 from .const import DOMAIN
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+
+    from py_nissan_leaf_obd_ble import NissanLeafObdBleApiClient
+    from py_nissan_leaf_obd_ble.OBDCommand import OBDCommand
+
+    from homeassistant.components.sensor import SensorEntityDescription
+    from homeassistant.core import HomeAssistant
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -38,7 +48,7 @@ DEFAULT_CACHE_VALUES = True
 DEFAULT_FETCH_TIMEOUT = 90
 
 
-class NissanLeafObdBleDataUpdateCoordinator(DataUpdateCoordinator):
+class NissanLeafObdBleDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     """Class to manage fetching data from the API."""
 
     def __init__(
@@ -46,10 +56,10 @@ class NissanLeafObdBleDataUpdateCoordinator(DataUpdateCoordinator):
         hass: HomeAssistant,
         address: str,
         api: NissanLeafObdBleApiClient,
-        options,
-        extra_commands=None,
-        extra_sensor_descriptions=None,
-        disabled_commands=None,
+        options: Mapping[str, Any],
+        extra_commands: dict[str, OBDCommand] | None = None,
+        extra_sensor_descriptions: dict[str, SensorEntityDescription] | None = None,
+        disabled_commands: set[str] | None = None,
     ) -> None:
         """Initialize."""
         super().__init__(
@@ -86,7 +96,8 @@ class NissanLeafObdBleDataUpdateCoordinator(DataUpdateCoordinator):
             return {}
 
         try:
-            new_data = await asyncio.wait_for(
+            # The OBD library ships no type information, so pin the shape here.
+            new_data: dict[str, Any] | None = await asyncio.wait_for(
                 self.api.async_get_data(
                     self.options,
                     extra_commands=self.extra_commands or None,
@@ -110,9 +121,7 @@ class NissanLeafObdBleDataUpdateCoordinator(DataUpdateCoordinator):
                     self.update_interval,
                 )
         except TimeoutError as err:
-            raise UpdateFailed(
-                f"BLE fetch timed out after {self._fetch_timeout}s"
-            ) from err
+            raise UpdateFailed(f"BLE fetch timed out after {self._fetch_timeout}s") from err
         except Exception as err:
             raise UpdateFailed(f"Unable to fetch data: {err}") from err
         else:
@@ -122,18 +131,19 @@ class NissanLeafObdBleDataUpdateCoordinator(DataUpdateCoordinator):
             return new_data
 
     @property
-    def options(self):
+    def options(self) -> Mapping[str, Any]:
         """User configuration options."""
         return self._options
 
     @options.setter
-    def options(self, options):
+    def options(self, options: Mapping[str, Any]) -> None:
         """Set the configuration options."""
         self._options = options
-        self._fast_poll_interval = options.get("fast_poll", DEFAULT_FAST_POLL)
-        self._slow_poll_interval = options.get("slow_poll", DEFAULT_SLOW_POLL)
-        self._xs_poll_interval = options.get("xs_poll", DEFAULT_XS_POLL)
-        self._cache_values = options.get("cache_values", DEFAULT_CACHE_VALUES)
-        self._fetch_timeout = float(
-            options.get("fetch_timeout", DEFAULT_FETCH_TIMEOUT)
-        )
+        self._fast_poll_interval: int = options.get("fast_poll", DEFAULT_FAST_POLL)
+        self._slow_poll_interval: int = options.get("slow_poll", DEFAULT_SLOW_POLL)
+        self._xs_poll_interval: int = options.get("xs_poll", DEFAULT_XS_POLL)
+        self._cache_values: bool = options.get("cache_values", DEFAULT_CACHE_VALUES)
+        self._fetch_timeout = float(options.get("fetch_timeout", DEFAULT_FETCH_TIMEOUT))
+
+
+type NissanLeafObdBleConfigEntry = ConfigEntry[NissanLeafObdBleDataUpdateCoordinator]

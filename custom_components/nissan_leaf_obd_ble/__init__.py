@@ -4,50 +4,49 @@ For more details about this integration, please refer to
 https://github.com/pbutterworth/nissan-leaf-obd-ble
 """
 
+from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING
 
 from bleak_retry_connector import get_device
+from py_nissan_leaf_obd_ble import NissanLeafObdBleApiClient
 
 from homeassistant.components import bluetooth
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_ADDRESS
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers.typing import ConfigType
 
-from py_nissan_leaf_obd_ble import NissanLeafObdBleApiClient
-from .const import DOMAIN, PLATFORMS, STARTUP_MESSAGE
-from .coordinator import NissanLeafObdBleDataUpdateCoordinator
+from .const import PLATFORMS, STARTUP_MESSAGE
+from .coordinator import NissanLeafObdBleConfigEntry, NissanLeafObdBleDataUpdateCoordinator
 from .overrides import load_overrides
+
+if TYPE_CHECKING:
+    from homeassistant.helpers.typing import ConfigType
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType):
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up this integration using YAML is not supported."""
+    _LOGGER.info(STARTUP_MESSAGE)
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
+async def async_setup_entry(hass: HomeAssistant, entry: NissanLeafObdBleConfigEntry) -> bool:
     """Set up this integration using UI."""
-    if hass.data.get(DOMAIN) is None:
-        hass.data.setdefault(DOMAIN, {})
-        _LOGGER.info(STARTUP_MESSAGE)
-
     address: str = entry.data[CONF_ADDRESS]
-    ble_device = bluetooth.async_ble_device_from_address(
-        hass, address.upper(), True
-    ) or await get_device(address)
+    ble_device = bluetooth.async_ble_device_from_address(hass, address.upper(), True) or await get_device(address)
     if not ble_device:
-        raise ConfigEntryNotReady(
-            f"Could not find OBDBLE device with address {address}"
-        )
+        raise ConfigEntryNotReady(f"Could not find OBDBLE device with address {address}")
 
     api = NissanLeafObdBleApiClient(ble_device)
 
-    extra_commands, extra_sensor_descriptions, disabled_commands = (
-        await hass.async_add_executor_job(load_overrides, hass, address)
-    )
+    (
+        extra_commands,
+        extra_sensor_descriptions,
+        disabled_commands,
+    ) = await hass.async_add_executor_job(load_overrides, hass, address)
 
     coordinator = NissanLeafObdBleDataUpdateCoordinator(
         hass,
@@ -59,9 +58,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         disabled_commands=disabled_commands,
     )
 
-    hass.data[DOMAIN][entry.entry_id] = coordinator
-
     await coordinator.async_config_entry_first_refresh()
+    entry.runtime_data = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     @callback
@@ -84,7 +82,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         )  # does the register callback, and returns a cancel callback for cleanup
     )
 
-    async def update_options_listener(hass: HomeAssistant | None, entry: ConfigEntry):
+    async def update_options_listener(hass: HomeAssistant, entry: NissanLeafObdBleConfigEntry) -> None:
         """Handle options update."""
         coordinator.options = entry.options
 
@@ -92,18 +90,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         entry.add_update_listener(update_options_listener)
     )  # add the listener for when the user changes options
 
-    # entry.add_update_listener(async_reload_entry)
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: NissanLeafObdBleConfigEntry) -> bool:
     """Handle removal of an entry."""
-    unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-    hass.data.pop(DOMAIN)
-    return unloaded
+    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
-async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def async_reload_entry(hass: HomeAssistant, entry: NissanLeafObdBleConfigEntry) -> None:
     """Reload config entry."""
     await async_unload_entry(hass, entry)
     await async_setup_entry(hass, entry)

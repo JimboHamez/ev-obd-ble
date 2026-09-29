@@ -1,8 +1,24 @@
-__pycache__
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+venv/
 pythonenv*
 .python-version
-.coverage
-venv
-.venv
-_new_package_repo/
+*.egg-info/
 .DS_Store
+
+# Coverage data
+.coverage
+.coverage.*
+htmlcov/
+
+# Local Claude Code settings and the MCP server config, which holds a Context7 API key
+.claude/settings.local.json
+.mcp.json
+
+# Local-only ESPHome and automation YAML for the test bench
+ha_components/
+_new_package_repo/

@@ -1,33 +1,48 @@
 """Adds config flow for Nissan Leaf OBD BLE."""
 
-from typing import Any
+from __future__ import annotations
 
-try:
-    from bluetooth_data_tools import human_readable_name
-except ImportError:  # pragma: no cover - fallback for missing dependency
-    def human_readable_name(_manufacturer: str | None, name: str | None, address: str):
-        """Fallback if bluetooth_data_tools is unavailable."""
-        return name or address
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
+
 import voluptuous as vol
 
 from homeassistant import config_entries
-from homeassistant.components.bluetooth import (
-    BluetoothServiceInfoBleak,
-    async_discovered_service_info,
-)
+from homeassistant.components.bluetooth import BluetoothServiceInfoBleak, async_discovered_service_info
 from homeassistant.const import CONF_ADDRESS
 from homeassistant.core import callback
-from homeassistant.data_entry_flow import FlowResult
 
 from .const import (
-    DOMAIN,
-    CONF_SERVICE_UUID,
     CONF_CHARACTERISTIC_UUID_READ,
     CONF_CHARACTERISTIC_UUID_WRITE,
-    DEFAULT_SERVICE_UUID,
+    CONF_SERVICE_UUID,
     DEFAULT_CHARACTERISTIC_UUID_READ,
     DEFAULT_CHARACTERISTIC_UUID_WRITE,
+    DEFAULT_SERVICE_UUID,
+    DOMAIN,
 )
+
+if TYPE_CHECKING:
+    from homeassistant.config_entries import ConfigFlowResult
+
+# bluetooth_data_tools exposes this as a plain function in some releases and as
+# an lru_cache wrapper in others, so bind it through an explicit callable type
+# rather than redefining the name.
+HumanReadableName = Callable[[str | None, str, str], str]
+
+
+def _fallback_human_readable_name(name: str | None, local_name: str, address: str) -> str:
+    """Name a discovered device when bluetooth_data_tools is unavailable."""
+    return local_name or address
+
+
+try:
+    from bluetooth_data_tools import human_readable_name as _human_readable_name
+
+    human_readable_name: HumanReadableName = _human_readable_name
+except ImportError:  # pragma: no cover - fallback for missing dependency
+    human_readable_name = _fallback_human_readable_name
+
 
 LOCAL_NAMES = {"OBDBLE"}
 
@@ -40,7 +55,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     def __init__(self) -> None:
         """Initialize."""
-        self._errors = {}
         self._discovery_info: BluetoothServiceInfoBleak | None = None
         self._discovered_devices: dict[str, BluetoothServiceInfoBleak] = {}
         self._selected_device: BluetoothServiceInfoBleak | None = None
@@ -53,30 +67,24 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Return the options flow."""
         return NissanLeafObdBleOptionsFlowHandler()
 
-    async def async_step_bluetooth(
-        self, discovery_info: BluetoothServiceInfoBleak
-    ) -> FlowResult:
+    async def async_step_bluetooth(self, discovery_info: BluetoothServiceInfoBleak) -> ConfigFlowResult:
         """Handle the bluetooth discovery step."""
         await self.async_set_unique_id(discovery_info.address)
         self._abort_if_unique_id_configured()
         self._discovery_info = discovery_info
         self.context["title_placeholders"] = {
-            "name": human_readable_name(
-                None, discovery_info.name, discovery_info.address
-            )
+            "name": human_readable_name(None, discovery_info.name, discovery_info.address)
         }
         return await self.async_step_user()
 
-    async def async_step_user(self, user_input: dict | None = None) -> FlowResult:
+    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Handle the user step to pick discovered device."""
         errors: dict[str, str] = {}
 
         if user_input is not None:
             address = user_input[CONF_ADDRESS]
             discovery_info = self._discovered_devices[address]
-            await self.async_set_unique_id(
-                discovery_info.address, raise_on_progress=False
-            )
+            await self.async_set_unique_id(discovery_info.address, raise_on_progress=False)
             self._abort_if_unique_id_configured()
             self._selected_device = discovery_info
             return await self.async_step_configure()
@@ -89,10 +97,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 if (
                     discovery.address in current_addresses
                     or discovery.address in self._discovered_devices
-                    or not any(
-                        discovery.name.startswith(local_name)
-                        for local_name in LOCAL_NAMES
-                    )
+                    or not any(discovery.name.startswith(local_name) for local_name in LOCAL_NAMES)
                 ):
                     continue
                 self._discovered_devices[discovery.address] = discovery
@@ -116,11 +121,11 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-    async def async_step_configure(
-        self, user_input: dict | None = None
-    ) -> FlowResult:
+    async def async_step_configure(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Handle UUID configuration step."""
         if user_input is not None:
+            # async_step_user only reaches this step once a device is selected.
+            assert self._selected_device is not None
             return self.async_create_entry(
                 title=self._selected_device.name,
                 data={CONF_ADDRESS: self._selected_device.address},
@@ -152,11 +157,9 @@ class NissanLeafObdBleOptionsFlowHandler(config_entries.OptionsFlow):
 
     def __init__(self) -> None:
         """Initialize options flow."""
-        self.options: dict = {}
+        self.options: dict[str, Any] = {}
 
-    async def async_step_init(
-        self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Manage the options."""
         if not self.options:
             self.options = dict(self.config_entry.options)
@@ -169,39 +172,26 @@ class NissanLeafObdBleOptionsFlowHandler(config_entries.OptionsFlow):
             step_id="init",
             data_schema=vol.Schema(
                 {
-                    vol.Required(
-                        "cache_values", default=self.options.get("cache_values", False)
-                    ): bool,
-                    vol.Required(
-                        "fast_poll", default=self.options.get("fast_poll", 10)
-                    ): int,
-                    vol.Required(
-                        "slow_poll", default=self.options.get("slow_poll", 300)
-                    ): int,
-                    vol.Required(
-                        "xs_poll", default=self.options.get("xs_poll", 3600)
-                    ): int,
+                    vol.Required("cache_values", default=self.options.get("cache_values", False)): bool,
+                    vol.Required("fast_poll", default=self.options.get("fast_poll", 10)): int,
+                    vol.Required("slow_poll", default=self.options.get("slow_poll", 300)): int,
+                    vol.Required("xs_poll", default=self.options.get("xs_poll", 3600)): int,
                     vol.Optional(
                         CONF_SERVICE_UUID,
-                        default=self.options.get(CONF_SERVICE_UUID)
-                        or DEFAULT_SERVICE_UUID,
+                        default=self.options.get(CONF_SERVICE_UUID) or DEFAULT_SERVICE_UUID,
                     ): str,
                     vol.Optional(
                         CONF_CHARACTERISTIC_UUID_READ,
-                        default=self.options.get(CONF_CHARACTERISTIC_UUID_READ)
-                        or DEFAULT_CHARACTERISTIC_UUID_READ,
+                        default=self.options.get(CONF_CHARACTERISTIC_UUID_READ) or DEFAULT_CHARACTERISTIC_UUID_READ,
                     ): str,
                     vol.Optional(
                         CONF_CHARACTERISTIC_UUID_WRITE,
-                        default=self.options.get(CONF_CHARACTERISTIC_UUID_WRITE)
-                        or DEFAULT_CHARACTERISTIC_UUID_WRITE,
+                        default=self.options.get(CONF_CHARACTERISTIC_UUID_WRITE) or DEFAULT_CHARACTERISTIC_UUID_WRITE,
                     ): str,
                 }
             ),
         )
 
-    async def _update_options(self):
+    async def _update_options(self) -> ConfigFlowResult:
         """Update config entry options."""
-        return self.async_create_entry(
-            title=self.config_entry.data.get(CONF_ADDRESS), data=self.options
-        )
+        return self.async_create_entry(title=self.config_entry.data[CONF_ADDRESS], data=self.options)

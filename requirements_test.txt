@@ -1,0 +1,27 @@
+# Test dependencies for the integration test suite.
+#
+#   pip install -r requirements_test.txt
+#   pytest
+#
+# Runtime requirements of the integration live in custom_components/<domain>/manifest.json and are installed
+# by Home Assistant. They are repeated here so the test suite can import the integration directly.
+
+# Pulls a matching Home Assistant for the integration-level tests.
+pytest-homeassistant-custom-component>=0.13.316,<0.14
+pytest>=8.0
+pytest-asyncio>=0.24
+pytest-cov>=5.0
+
+# Runtime requirement declared in manifest.json.
+py-nissan-leaf-obd-ble>=0.1.2
+
+# Pulled in by Home Assistant's bluetooth_adapters dependency (through its usb component), but not by the
+# homeassistant wheel itself.
+aiousbwatcher>=1.1.0
+pyserial>=3.5
+
+# Linting and static typing. mypy --strict is the quality scale's strict-typing rule; the config lives in
+# pyproject.toml.
+mypy>=1.11
+ruff>=0.15
+types-PyYAML>=6.0.12
