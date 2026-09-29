@@ -18,3 +18,6 @@ jobs:
         uses: "hacs/action@main"
         with:
           category: "integration"
+          # The licence is undecided (CONVERSION.md section 6): upstream has none and the OBD library is GPL-2.0.
+          # Remove this once a LICENSE file is added.
+          ignore: "license"

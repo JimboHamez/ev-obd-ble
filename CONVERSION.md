@@ -211,7 +211,9 @@ table is known-good. C is a refactor of A, not a competing design.
   surfaced. It was also entirely stubbed. Removed while closing the
   `strict-typing` rule, which it made unachievable.
 - **No LICENSE file**, though `README.md` badges link to one and the upstream
-  library is GPL-derived. Needs resolving before vendoring (§5).
+  library is GPL-derived. Needs resolving before vendoring (§5). Until then
+  the HACS validation workflow skips its licence check (`ignore: "license"`
+  in `.github/workflows/validate.yaml`); drop that when the file is added.
 - **`entity.py` reports bad device info** — `manufacturer` is set to the
   integration name and `model` to the version string. Worth fixing during the
   rename, when the correct values are Toyota/Subaru anyway.
