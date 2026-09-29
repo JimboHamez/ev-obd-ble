@@ -7,12 +7,12 @@ Python 3.13 (matching the version Home Assistant 2026.2 ships against).
 ## Install
 
 ```bash
-pip install -r requirements-dev.txt
-pre-commit install
+pip install -r requirements_test.txt
 ```
 
-`requirements-dev.txt` includes the integration's own runtime requirement from
-`manifest.json`, so the test suite can import the package directly.
+`requirements_test.txt` includes the integration's own runtime requirement from
+`manifest.json`, so the test suite can import the package directly. All tool
+configuration (pytest, coverage, ruff, mypy) lives in `pyproject.toml`.
 
 > On a Debian/Ubuntu host with an externally-managed Python, add
 > `--break-system-packages`, or work inside a virtualenv.
@@ -20,10 +20,17 @@ pre-commit install
 ## Test
 
 ```bash
-pytest              # with coverage, per setup.cfg
-pytest --no-cov     # faster
+pytest                    # with coverage, per pyproject.toml
+pytest --no-cov           # faster
+ruff format --check .
 ruff check .
+mypy custom_components    # strict; the quality scale's strict-typing rule
 ```
+
+CI runs the same checks (`.github/workflows/test.yml`), plus hassfest, HACS
+validation and report-only security scans. `quality_scale.yaml` in the
+integration package records the status of every quality scale rule; update it
+in the same change that closes or opens a rule.
 
 ## How the test suite is laid out
 

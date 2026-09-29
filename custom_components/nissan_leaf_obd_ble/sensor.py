@@ -2,18 +2,18 @@
 
 from __future__ import annotations
 
-from homeassistant.components.sensor import (
-    SensorDeviceClass,
-    SensorEntity,
-    SensorEntityDescription,
-    SensorStateClass,
-)
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.typing import StateType
+from typing import TYPE_CHECKING
 
-from .coordinator import NissanLeafObdBleConfigEntry
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorEntityDescription, SensorStateClass
+
 from .entity import NissanLeafObdBleEntity
+
+if TYPE_CHECKING:
+    from homeassistant.core import HomeAssistant
+    from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+    from homeassistant.helpers.typing import StateType
+
+    from .coordinator import NissanLeafObdBleConfigEntry
 
 # All values come from a single coordinator refresh, so entities never talk to
 # the dongle themselves and need no update throttling.
@@ -258,13 +258,9 @@ async def async_setup_entry(
 ) -> None:
     """Set up sensor platform."""
     coordinator = entry.runtime_data
-    entities = [
-        NissanLeafObdBleSensor(coordinator, entry, desc)
-        for desc in SENSOR_TYPES.values()
-    ]
+    entities = [NissanLeafObdBleSensor(coordinator, entry, desc) for desc in SENSOR_TYPES.values()]
     entities.extend(
-        NissanLeafObdBleSensor(coordinator, entry, desc)
-        for desc in coordinator.extra_sensor_descriptions.values()
+        NissanLeafObdBleSensor(coordinator, entry, desc) for desc in coordinator.extra_sensor_descriptions.values()
     )
     async_add_entities(entities)
 

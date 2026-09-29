@@ -2,15 +2,17 @@
 
 from __future__ import annotations
 
-from homeassistant.components.binary_sensor import (
-    BinarySensorEntity,
-    BinarySensorEntityDescription,
-)
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from typing import TYPE_CHECKING
 
-from .coordinator import NissanLeafObdBleConfigEntry
+from homeassistant.components.binary_sensor import BinarySensorEntity, BinarySensorEntityDescription
+
 from .entity import NissanLeafObdBleEntity
+
+if TYPE_CHECKING:
+    from homeassistant.core import HomeAssistant
+    from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+
+    from .coordinator import NissanLeafObdBleConfigEntry
 
 # All values come from a single coordinator refresh, so entities never talk to
 # the dongle themselves and need no update throttling.
@@ -52,10 +54,7 @@ async def async_setup_entry(
 ) -> None:
     """Set up binary_sensor platform."""
     coordinator = entry.runtime_data
-    async_add_entities(
-        NissanLeafObdBleBinarySensor(coordinator, entry, desc)
-        for desc in BINARY_SENSOR_TYPES.values()
-    )
+    async_add_entities(NissanLeafObdBleBinarySensor(coordinator, entry, desc) for desc in BINARY_SENSOR_TYPES.values())
 
 
 class NissanLeafObdBleBinarySensor(NissanLeafObdBleEntity, BinarySensorEntity):

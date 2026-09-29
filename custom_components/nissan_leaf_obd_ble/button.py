@@ -2,13 +2,18 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
 from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from .coordinator import NissanLeafObdBleConfigEntry
 from .entity import NissanLeafObdBleEntity
+
+if TYPE_CHECKING:
+    from homeassistant.core import HomeAssistant
+    from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+
+    from .coordinator import NissanLeafObdBleConfigEntry
 
 # The button only asks the coordinator to refresh, so it needs no throttling.
 PARALLEL_UPDATES = 0
@@ -27,9 +32,7 @@ async def async_setup_entry(
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up button platform."""
-    async_add_entities(
-        [NissanLeafObdBleRefreshButton(entry.runtime_data, entry, REFRESH_BUTTON)]
-    )
+    async_add_entities([NissanLeafObdBleRefreshButton(entry.runtime_data, entry, REFRESH_BUTTON)])
 
 
 class NissanLeafObdBleRefreshButton(NissanLeafObdBleEntity, ButtonEntity):

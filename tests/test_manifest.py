@@ -33,13 +33,13 @@ def test_domain_matches_package_directory(integration_dir: Path, manifest: dict)
 def test_const_domain_matches_manifest(integration_dir: Path, manifest: dict):
     """const.DOMAIN must equal the manifest domain."""
     const = importlib.import_module(f"custom_components.{integration_dir.name}.const")
-    assert const.DOMAIN == manifest["domain"]
+    assert manifest["domain"] == const.DOMAIN
 
 
 def test_const_version_matches_manifest(integration_dir: Path, manifest: dict):
     """const.VERSION must equal the manifest version."""
     const = importlib.import_module(f"custom_components.{integration_dir.name}.const")
-    assert const.VERSION == manifest["version"]
+    assert manifest["version"] == const.VERSION
 
 
 def test_const_name_matches_manifest_and_hacs(integration_dir: Path, manifest: dict):
@@ -63,7 +63,7 @@ def test_manifest_requirements_are_installed(manifest: dict):
         module = distribution.replace("-", "_")
         pytest.importorskip(
             module,
-            reason=f"{distribution} missing; run pip install -r requirements-dev.txt",
+            reason=f"{distribution} missing; run pip install -r requirements_test.txt",
         )
 
 
@@ -88,8 +88,6 @@ def test_translations_match_strings(integration_dir: Path):
     def keys(node, prefix=""):
         if not isinstance(node, dict):
             return {prefix}
-        return {
-            k for key, value in node.items() for k in keys(value, f"{prefix}/{key}")
-        }
+        return {k for key, value in node.items() for k in keys(value, f"{prefix}/{key}")}
 
     assert keys(strings) == keys(english)

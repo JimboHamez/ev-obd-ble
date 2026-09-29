@@ -2,16 +2,17 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from homeassistant.const import CONF_ADDRESS
 from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import EntityDescription
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, NAME, VERSION
-from .coordinator import (
-    NissanLeafObdBleConfigEntry,
-    NissanLeafObdBleDataUpdateCoordinator,
-)
+from .coordinator import NissanLeafObdBleConfigEntry, NissanLeafObdBleDataUpdateCoordinator
+
+if TYPE_CHECKING:
+    from homeassistant.helpers.entity import EntityDescription
 
 
 class NissanLeafObdBleEntity(CoordinatorEntity[NissanLeafObdBleDataUpdateCoordinator]):

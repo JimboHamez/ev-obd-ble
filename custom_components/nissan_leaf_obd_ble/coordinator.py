@@ -3,23 +3,24 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Mapping
-from datetime import timedelta
 import logging
+from datetime import timedelta
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.bluetooth.api import async_address_present
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from py_nissan_leaf_obd_ble import NissanLeafObdBleApiClient
 from .const import DOMAIN
 
 if TYPE_CHECKING:
-    from homeassistant.components.sensor import SensorEntityDescription
+    from collections.abc import Mapping
 
+    from py_nissan_leaf_obd_ble import NissanLeafObdBleApiClient
     from py_nissan_leaf_obd_ble.OBDCommand import OBDCommand
+
+    from homeassistant.components.sensor import SensorEntityDescription
+    from homeassistant.core import HomeAssistant
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -120,9 +121,7 @@ class NissanLeafObdBleDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]
                     self.update_interval,
                 )
         except TimeoutError as err:
-            raise UpdateFailed(
-                f"BLE fetch timed out after {self._fetch_timeout}s"
-            ) from err
+            raise UpdateFailed(f"BLE fetch timed out after {self._fetch_timeout}s") from err
         except Exception as err:
             raise UpdateFailed(f"Unable to fetch data: {err}") from err
         else:

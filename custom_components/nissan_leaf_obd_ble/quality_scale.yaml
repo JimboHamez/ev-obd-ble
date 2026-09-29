@@ -1,0 +1,125 @@
+# Integration quality scale record: https://developers.home-assistant.io/docs/core/integration-quality-scale
+# Target: Platinum. As a HACS custom integration the docs-* rules map to README sections, brands to the
+# brand/ directory, and integration-owner to manifest codeowners.
+rules:
+  # Bronze
+  action-setup:
+    status: exempt
+    comment: The integration registers no service actions.
+  appropriate-polling:
+    status: done
+    comment: >
+      Fast, slow and out-of-range intervals are chosen per poll from the car's state and are configurable in
+      options; the slow interval stays long to spare the relay some cars click on every wake.
+  brands: done
+  common-modules: done
+  config-flow: done
+  config-flow-test-coverage:
+    status: todo
+    comment: There are no config or options flow tests yet.
+  dependency-transparency:
+    status: todo
+    comment: >
+      Declared in manifest requirements, but whether the OBD client is kept, forked or vendored for the
+      bZ4X / Solterra port is open (CONVERSION.md section 5); revisit once that is decided.
+  docs-actions:
+    status: exempt
+    comment: The integration registers no service actions.
+  docs-high-level-description: done
+  docs-installation-instructions: done
+  docs-removal-instructions:
+    status: todo
+    comment: The README has no removal section.
+  entity-event-setup:
+    status: exempt
+    comment: >
+      Entities read coordinator data only. The Bluetooth advertisement callback is registered once per
+      entry in __init__.py and released through entry.async_on_unload.
+  entity-unique-id: done
+  has-entity-name: done
+  runtime-data: done
+  test-before-configure:
+    status: todo
+    comment: >
+      The config flow only checks that the dongle is advertising; it never opens an OBD session to
+      confirm the characteristic UUIDs work.
+  test-before-setup: done
+  unique-config-entry: done
+
+  # Silver
+  action-exceptions:
+    status: exempt
+    comment: The integration registers no service actions.
+  config-entry-unloading: done
+  docs-configuration-parameters: done
+  docs-installation-parameters: done
+  entity-unavailable:
+    status: todo
+    comment: >
+      When the dongle is out of range the coordinator returns an empty (or cached) dict instead of raising
+      UpdateFailed, so entities report unknown rather than unavailable.
+  integration-owner:
+    status: todo
+    comment: manifest codeowners still names the upstream author; update it with the domain rename.
+  log-when-unavailable:
+    status: todo
+    comment: Follows entity-unavailable; the out-of-range path logs at debug only.
+  parallel-updates: done
+  reauthentication-flow:
+    status: exempt
+    comment: The dongle has no credentials.
+  test-coverage:
+    status: todo
+    comment: Line coverage is below the 95% bar; see the pytest job's report.
+
+  # Gold
+  devices: done
+  diagnostics:
+    status: todo
+    comment: There is no diagnostics.py.
+  discovery: done
+  discovery-update-info:
+    status: exempt
+    comment: The dongle is identified by its fixed Bluetooth address, which never changes.
+  docs-data-update: todo
+  docs-examples: todo
+  docs-known-limitations: done
+  docs-supported-devices: done
+  docs-supported-functions: done
+  docs-troubleshooting: done
+  docs-use-cases: todo
+  dynamic-devices:
+    status: exempt
+    comment: Each config entry is one dongle with one device; devices are never added later.
+  entity-category: done
+  entity-device-class:
+    status: todo
+    comment: bat_12v_current has no device class or unit.
+  entity-disabled-by-default: todo
+  entity-translations: done
+  exception-translations:
+    status: todo
+    comment: ConfigEntryNotReady and UpdateFailed are raised with plain strings.
+  icon-translations:
+    status: todo
+    comment: Icons are set on entity descriptions rather than in icons.json.
+  reconfiguration-flow:
+    status: todo
+    comment: The options flow covers the UUIDs and poll intervals, but there is no async_step_reconfigure.
+  repair-issues:
+    status: exempt
+    comment: A dongle out of range is transient and needs no user action.
+  stale-devices:
+    status: exempt
+    comment: Each config entry has a single device, removed with the entry.
+
+  # Platinum
+  async-dependency:
+    status: done
+    comment: The client is built on bleak; it must stay natively async through the port.
+  inject-websession:
+    status: done
+    comment: >
+      Bluetooth has no web session; the equivalent is that the client takes the BLEDevice resolved by Home
+      Assistant's bluetooth component instead of scanning itself, which it does.
+  strict-typing: done

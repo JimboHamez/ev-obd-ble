@@ -31,9 +31,7 @@ def test_py_typed_marker_present(integration_dir: Path) -> None:
 
 
 @pytest.mark.parametrize("platform", PLATFORM_MODULES)
-def test_platform_declares_parallel_updates(
-    integration_dir: Path, platform: str
-) -> None:
+def test_platform_declares_parallel_updates(integration_dir: Path, platform: str) -> None:
     """parallel-updates: every entity platform declares its limit."""
     module = _module(integration_dir, platform)
     assert isinstance(getattr(module, "PARALLEL_UPDATES", None), int)
@@ -101,11 +99,8 @@ def test_translation_keys_resolve(integration_dir: Path, translations: str) -> N
             for node in ast.walk(tree)
             if isinstance(node, ast.Call)
             for keyword in node.keywords
-            if keyword.arg == "translation_key"
-            and isinstance(keyword.value, ast.Constant)
+            if keyword.arg == "translation_key" and isinstance(keyword.value, ast.Constant)
         }
         declared = set(entity_names.get(platform, {}))
         assert used, f"{platform} declares no translation keys"
-        assert used == declared, (
-            f"{platform}: {used ^ declared} missing from one side in {translations}"
-        )
+        assert used == declared, f"{platform}: {used ^ declared} missing from one side in {translations}"

@@ -5,6 +5,7 @@ instead of hard-coding its name, so the suite keeps working across the
 rename from the Nissan Leaf domain to the bZ4X / Solterra one.
 """
 
+import contextlib
 import importlib
 import json
 import sys
@@ -31,15 +32,10 @@ INTEGRATION_MODULES = (
 
 def _discover_integration_dir() -> Path:
     """Return the single integration directory under custom_components/."""
-    candidates = [
-        path
-        for path in COMPONENTS_ROOT.iterdir()
-        if path.is_dir() and (path / "manifest.json").is_file()
-    ]
+    candidates = [path for path in COMPONENTS_ROOT.iterdir() if path.is_dir() and (path / "manifest.json").is_file()]
     if len(candidates) != 1:
         raise AssertionError(
-            f"expected exactly one integration under {COMPONENTS_ROOT}, "
-            f"found {[c.name for c in candidates]}"
+            f"expected exactly one integration under {COMPONENTS_ROOT}, found {[c.name for c in candidates]}"
         )
     return candidates[0]
 
@@ -61,12 +57,10 @@ def _preimport() -> None:
     if str(REPO_ROOT) not in sys.path:
         sys.path.insert(0, str(REPO_ROOT))
     for module in INTEGRATION_MODULES:
-        try:
+        # Let test_manifest.py report the failure with a useful message
+        # rather than aborting collection of the whole suite.
+        with contextlib.suppress(ImportError):
             importlib.import_module(f"custom_components.{DOMAIN}.{module}")
-        except ImportError:
-            # Let test_manifest.py report the failure with a useful message
-            # rather than aborting collection of the whole suite.
-            pass
 
 
 _preimport()
